@@ -1,8 +1,13 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
 
-app = FastAPI()
+from database import create_document
+from schemas import Inquiry
+
+app = FastAPI(title="Flames BPO API", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,11 +19,66 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI Backend!"}
+    return {
+        "name": "Flames BPO API",
+        "message": "Backend is running",
+        "endpoints": ["/api/hello", "/api/services", "/api/inquiry"],
+    }
 
 @app.get("/api/hello")
 def hello():
     return {"message": "Hello from the backend API!"}
+
+@app.get("/api/services")
+def get_services():
+    return {
+        "services": [
+            {
+                "key": "sales",
+                "title": "Sales Outsourcing",
+                "tagline": "Pipeline, meetings, and revenue on autopilot",
+                "points": [
+                    "B2B/B2C outbound + inbound",
+                    "SDR teams with SLA-driven KPIs",
+                    "Lead qualification and appointment setting",
+                    "24/7 coverage with multilingual reps"
+                ]
+            },
+            {
+                "key": "technical",
+                "title": "Technical Support",
+                "tagline": "Delight customers with fast, expert help",
+                "points": [
+                    "Tier 1–3 support, L1 triage to L3 escalation",
+                    "Omnichannel: chat, email, voice, socials",
+                    "Knowledge base build-out and automation",
+                    "CSAT, FRT, AHT, and QA tracked transparently"
+                ]
+            },
+            {
+                "key": "operations",
+                "title": "Operations Outsourcing",
+                "tagline": "Scale back office with precision and speed",
+                "points": [
+                    "Data entry, content moderation, KYC",
+                    "Finance ops: AR/AP, reconciliation",
+                    "E-commerce: listings, order management",
+                    "Custom workflows and SOP design"
+                ]
+            }
+        ]
+    }
+
+class InquiryRequest(Inquiry):
+    pass
+
+@app.post("/api/inquiry")
+def submit_inquiry(payload: InquiryRequest):
+    try:
+        doc_id = create_document("inquiry", payload)
+        return {"status": "ok", "id": doc_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/test")
 def test_database():
